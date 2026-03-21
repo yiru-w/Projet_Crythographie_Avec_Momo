@@ -1,0 +1,149 @@
+
+#include "Registre.h"
+#include <iomanip>
+#include <complex>
+#include <cstdint>
+
+/**
+ * On définit 2 masque, l'un avec que des 1 et l'autre avec que des 0. Ca pourrait
+ * être utile...
+ */
+#define MASK1 0b1111111111111111111111111111111111111111111111111111111111111111
+#define MASK0 0b0
+
+Registre::Registre(uint t) : taille(t) {}
+
+Registre::Registre(uint t, string strVal) : taille(t) {
+    setValeur(strVal);
+}
+Registre::Registre(uint t, uint32_t val) : taille(t), registre(val) {}
+
+uint Registre::getTaille() const {
+    return taille;
+}
+
+uint Registre::get(uint numbit) const {
+    if (numbit>=taille)
+        throw "Indice incorrect";
+    return registre>>(taille-1-numbit)&1;
+}
+
+unsigned char Registre::getByte(uint numbit) const {
+    if (taille != 32) {
+        throw "Registre doit etre de 32 bits (4 octets)";
+    }
+    if (numbit > 3) {
+        throw "L'indice du byte doit etre entre 0 et 3";
+    }
+    return registre >> (8*(3-numbit)) & 0xFF;
+}
+
+
+void Registre::setByte(uint numbit, unsigned char b) {
+    if (taille != 32) {
+        throw "Registre doit etre de 32 bits (4 octets)";
+    }
+    if (numbit > 3) {
+        throw "L'indice du byte doit etre entre 0 et 3";
+    }
+    uint shift = 8 * (3 - numbit);
+    ullong reg = 0xFFULL << shift;
+    registre &= ~reg;
+    registre |= ((ullong)b << shift);
+
+}
+
+void Registre::set(uint numbit, uint b) {
+
+    if (numbit>=taille) {
+        throw "Indice incorrect";
+    }
+    if (b != 0 && b != 1) {
+        throw "b doit etre 0 ou 1";
+    }
+    ullong reg = 1ULL << (taille-1-numbit);
+    if (b == 1) {
+        registre |= reg;
+    }
+    else {
+        registre &= ~reg;
+    }
+}
+
+void Registre::rotationDeByte() {
+    if (taille != 32) {
+        throw "Registre doit etre de 32 bits (4 octets)";
+    }
+    ullong byteAgauche = (registre >> 24) & 0xFF;
+    registre <<= 8;
+    registre &= 0xFFFFFFFF;
+    registre |= byteAgauche ;
+}
+
+void Registre::shiftL(uint nbbits) {
+    registre <<= nbbits;
+    //Exemple : 1001 -> 10010.
+    //reg = 10000 - 1 = 01111
+    //10010 & 01111 = 00010
+    const ullong reg = (1ULL << taille) - 1;
+    registre &= reg;
+}
+
+void Registre::setValeur(const string& strVal) {
+    if (strVal.length() != taille)
+        throw "Longueur de la chaine d'initialisation incorrecte";
+    registre = 0;
+    for (uint i = 0; i < taille; i++) {
+        if (strVal[i] == '1') {
+            registre |= (1ULL << (taille - 1 - i));
+        }
+    }
+}
+
+string Registre::toBin() const {
+    string str = "";
+    ulong reg = registre;
+    for (uint i = 0; i < taille; ++i) {
+        uint bit = reg % 2;
+        str = (bit==0?"0":"1")+str;
+        reg /= 2;
+    }
+
+    return str;
+}
+
+string Registre::toHex() const {
+    stringstream ss;
+    ss << hex << uppercase << setw(taille / 4) << setfill('0') << registre;
+    return ss.str();
+}
+
+
+bool Registre::operator==(const Registre & r) const {
+    return (registre == r.registre && taille == r.taille);
+}
+
+ostream& operator<<(ostream& f, const Registre& r) {
+    f << r.toBin();
+    return f;
+}
+
+const Registre& Registre::operator=(const Registre &r) {
+    if (&r == this)
+        return r;
+
+    this->taille = r.taille;
+    this->registre = r.registre;
+
+    return *this;
+}
+Registre Registre::XOR(const Registre& r) const {
+    if (taille != r.taille)
+        throw "XOR entre 2 registres de tailles différentes";
+
+    Registre registre_res(taille);
+
+    registre_res.registre = registre ^ r.registre;
+
+    return registre_res;
+}
