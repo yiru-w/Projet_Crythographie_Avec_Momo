@@ -17,6 +17,7 @@ class AES {
     static const int Nk = 4;
     static const int Nr = 10;
     static const unsigned char sbox[256];
+    static const unsigned char Invsbox[256];
     static const uint32_t Rcon[11];
 
     Registre w[Nb * (Nr + 1)];
@@ -24,18 +25,26 @@ class AES {
     //Generer cles
     void keyExpansion(const vector<Registre> &Key);
     static void SubWord(Registre& r);
+    static void InvSubWord(Registre& r);
 
     //Chiffrement
     void Cipher(Registre state[4]) const;
     void AddRoundKey(Registre state[4], int indice) const;
-    static void SubBytes(Registre state[4]);
+    static void SubBytes(Registre state[4]) ;
     static void ShiftRows(Registre state[4]);
     static void MixColumns(Registre state[4]);
 
 
+    //Dechiffrement
+    void InvCipher(Registre state[4]) const;
+    static void InvShiftRows(Registre state[4]);
+    static void InvSubBytes(Registre state[4]);
+    static void InvMixColumns(Registre state[4]);
+
 public:
     AES(const vector<Registre> &key);
-    void chiffrement(Registre state[4]);
+    void chiffrement(Registre state[4]) const;
+    void Dechiffrement(Registre state[4]) const;
 };
 
 
