@@ -70,6 +70,32 @@ void Registre::set(uint numbit, uint b) {
     }
 }
 
+Registre Registre::xtime() const {
+    // m(x) = x^8 + x^4 + x^3 + x + 1 = 1 0001 1011 (9 bits)
+    // Comme on travaille sur 8 bits (un octet), on ignore le bit de poids fort (x^8)
+    // et on utilise 0001 1011 = 0x1B pour la réduction.
+    //
+    // Quand on décale vers la gauche (multiplication par {02}),
+    // si le bit le plus à gauche était 1, le résultat dépasse 8 bits (débordement).
+    // On fait alors un XOR avec 0x1B pour ramener le résultat dans GF(2^8).
+    //
+    // Exemple : 1011 0111 (0xB7)
+    // Décalage : 1 0110 1110  <-- Le '1' de gauche est en trop
+    // XOR m(x) : 1 0001 1011  <-- Le '1' de m(x) annule le '1' en trop
+    // Résultat : 0 0111 0101 (0x75)
+    Registre r(32);
+    for (int i = 0; i < 4; i++) {
+        unsigned char b = this->getByte(i);
+        if (this->get(i * 8) == 1) {
+            b = (b << 1) ^ 0x1b;
+        }else {
+            b = b << 1;
+        }
+        r.setByte(i, b);
+    }
+    return r;
+}
+
 void Registre::rotationDeByte() {
     if (taille != 32) {
         throw "Registre doit etre de 32 bits (4 octets)";

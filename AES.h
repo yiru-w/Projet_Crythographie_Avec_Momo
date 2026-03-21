@@ -29,7 +29,7 @@ class AES {
     void Cipher(Registre state[4]);
     void AddRoundKey(Registre state[4], int indice) const;
     static void SubBytes(Registre state[4]);
-    void ShiftRows(Registre state[4]);
+    static void ShiftRows(Registre state[4]);
     void MixColumns(Registre state[4]);
 
 };

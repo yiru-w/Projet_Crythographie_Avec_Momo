@@ -119,11 +119,25 @@ void AES::ShiftRows(Registre state[4]) {
     //Quatrieme ligne rotation vers a gauche  3
     t = state[0].getByte(3);
     state[0].setByte(3, state[3].getByte(3));
-    state[2].setByte(3, state[1].getByte(3));
     state[3].setByte(3, state[2].getByte(3));
+    state[2].setByte(3, state[1].getByte(3));
     state[1].setByte(3, t);
 }
 
-void AES::MixColumns(Registre state[4]) {
 
+void AES::MixColumns(Registre state[4]) {
+    for (int i= 0; i < 4; i++) {
+        Registre s = state[i];
+        Registre ApresXtime2 = s.xtime(); // 02 FOIS S
+        Registre ApresXtime3 = ApresXtime2.XOR(s);
+
+        //s'0 = ({02} • s0) ⊕ ({03} • s1) ⊕ s2 ⊕ s3
+        state[i].setByte(0,ApresXtime2.getByte(0) ^ ApresXtime3.getByte(1) ^ s.getByte(2) ^ s.getByte(3));
+        //s'1 = s0 ⊕ ({02} • s1) ⊕ ({03} • s2) ⊕ s3
+        state[i].setByte(1,s.getByte(0) ^ ApresXtime2.getByte(1) ^ ApresXtime3.getByte(2) ^ s.getByte(3));
+        //s'2 = s0 ⊕ s1 ⊕({02} • s2) ⊕ ({03} • s3)
+        state[i].setByte(2,s.getByte(0) ^ s.getByte(1) ^ ApresXtime2.getByte(2) ^ ApresXtime3.getByte(3));
+        //s'3 = ({03} • s0) ⊕ s1 ⊕ s2 ⊕ ({02} • s3).
+        state[i].setByte(3,ApresXtime3.getByte(0) ^ s.getByte(1) ^ s.getByte(2) ^ ApresXtime2.getByte(3));
+    }
 }

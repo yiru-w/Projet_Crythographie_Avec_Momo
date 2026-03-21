@@ -43,6 +43,8 @@ public:
     void shiftL(uint nbbits = 1); // décalage à gauche d'un certain nombre de bits
     void rotationDeByte(); //[B0, B1, B2, B3] -> [B1, B2, B3, B0]
 
+    Registre xtime() const;
+
     string toBin() const; // Renvoie la suite de caractères 0 et 1 correspondant à la valeur du registre
     string toHex() const;
 
