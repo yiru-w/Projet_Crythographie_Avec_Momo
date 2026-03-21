@@ -37,6 +37,17 @@ const uint32_t AES::Rcon[11] = {
     0x36000000
 };
 
+AES::AES(const vector<Registre> &key) : w() {
+    if (key.size() != Nk) {
+        throw invalid_argument("Taille de cles obliger 4");
+    }
+    this->keyExpansion(key);
+}
+
+void AES::chiffrement(Registre state[4]) {
+    Cipher(state);
+}
+
 void AES::keyExpansion(const vector<Registre> &key) {
     int i = 0;
 
@@ -65,7 +76,7 @@ void AES::SubWord(Registre& r) {
     }
 }
 
-void AES::Cipher(Registre state[4]) {
+void AES::Cipher(Registre state[4]) const {
     AddRoundKey(state,0);
     for (int i = 1; i < Nr; i++) {
         SubBytes(state);

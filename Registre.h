@@ -27,8 +27,9 @@ private:
     ullong registre = 0; // valeur courante du registre (0 par défaut)
     
 public:
+    Registre() : taille(32) {} // Pour AES initialise
     Registre(uint taille);
-    Registre(uint taille, string strVal); // strVal contient "0100111000..." une suite binaire représentée par des caractères
+    Registre(uint taille, const string& strVal); // strVal contient "0100111000..." une suite binaire représentée par des caractères
     Registre(uint t, uint32_t val);
 
     uint getTaille() const;

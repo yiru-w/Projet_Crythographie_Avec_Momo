@@ -13,7 +13,7 @@
 
 Registre::Registre(uint t) : taille(t) {}
 
-Registre::Registre(uint t, string strVal) : taille(t) {
+Registre::Registre(uint t, const string& strVal) : taille(t) {
     setValeur(strVal);
 }
 Registre::Registre(uint t, uint32_t val) : taille(t), registre(val) {}
@@ -24,16 +24,16 @@ uint Registre::getTaille() const {
 
 uint Registre::get(uint numbit) const {
     if (numbit>=taille)
-        throw "Indice incorrect";
+        throw invalid_argument("Indice incorrect");
     return registre>>(taille-1-numbit)&1;
 }
 
 unsigned char Registre::getByte(uint numbit) const {
     if (taille != 32) {
-        throw "Registre doit etre de 32 bits (4 octets)";
+        throw invalid_argument("Registre doit etre de 32 bits (4 octets)");
     }
     if (numbit > 3) {
-        throw "L'indice du byte doit etre entre 0 et 3";
+        throw invalid_argument("L'indice du byte doit etre entre 0 et 3");
     }
     return registre >> (8*(3-numbit)) & 0xFF;
 }
@@ -41,25 +41,25 @@ unsigned char Registre::getByte(uint numbit) const {
 
 void Registre::setByte(uint numbit, unsigned char b) {
     if (taille != 32) {
-        throw "Registre doit etre de 32 bits (4 octets)";
+        throw invalid_argument("Registre doit etre de 32 bits (4 octets)");
     }
     if (numbit > 3) {
-        throw "L'indice du byte doit etre entre 0 et 3";
+        throw invalid_argument("L'indice du byte doit etre entre 0 et 3");
     }
     uint shift = 8 * (3 - numbit);
     ullong reg = 0xFFULL << shift;
     registre &= ~reg;
-    registre |= ((ullong)b << shift);
+    registre |= (static_cast<ullong>(b) << shift);
 
 }
 
 void Registre::set(uint numbit, uint b) {
 
     if (numbit>=taille) {
-        throw "Indice incorrect";
+        throw invalid_argument("Indice incorrect");
     }
     if (b != 0 && b != 1) {
-        throw "b doit etre 0 ou 1";
+        throw invalid_argument("b doit etre 0 ou 1");
     }
     ullong reg = 1ULL << (taille-1-numbit);
     if (b == 1) {
@@ -98,7 +98,7 @@ Registre Registre::xtime() const {
 
 void Registre::rotationDeByte() {
     if (taille != 32) {
-        throw "Registre doit etre de 32 bits (4 octets)";
+        throw invalid_argument("Registre doit etre de 32 bits (4 octets)");
     }
     ullong byteAgauche = (registre >> 24) & 0xFF;
     registre <<= 8;
@@ -117,7 +117,7 @@ void Registre::shiftL(uint nbbits) {
 
 void Registre::setValeur(const string& strVal) {
     if (strVal.length() != taille)
-        throw "Longueur de la chaine d'initialisation incorrecte";
+        throw invalid_argument("Longueur de la chaine d'initialisation incorrecte");
     registre = 0;
     for (uint i = 0; i < taille; i++) {
         if (strVal[i] == '1') {
@@ -127,20 +127,16 @@ void Registre::setValeur(const string& strVal) {
 }
 
 string Registre::toBin() const {
-    string str = "";
-    ulong reg = registre;
-    for (uint i = 0; i < taille; ++i) {
-        uint bit = reg % 2;
-        str = (bit==0?"0":"1")+str;
-        reg /= 2;
+    string str;
+    for (int i = 0; i < taille; ++i) {
+        str += (this->get(i) == 0 ? "0" : "1");
     }
-
     return str;
 }
 
 string Registre::toHex() const {
     stringstream ss;
-    ss << hex << uppercase << setw(taille / 4) << setfill('0') << registre;
+    ss << hex << uppercase << setw(static_cast<int>(taille / 4)) << setfill('0') << registre;
     return ss.str();
 }
 
@@ -165,7 +161,7 @@ const Registre& Registre::operator=(const Registre &r) {
 }
 Registre Registre::XOR(const Registre& r) const {
     if (taille != r.taille)
-        throw "XOR entre 2 registres de tailles différentes";
+        throw invalid_argument("XOR entre 2 registres de tailles différentes");
 
     Registre registre_res(taille);
 

@@ -26,12 +26,16 @@ class AES {
     static void SubWord(Registre& r);
 
     //Chiffrement
-    void Cipher(Registre state[4]);
+    void Cipher(Registre state[4]) const;
     void AddRoundKey(Registre state[4], int indice) const;
     static void SubBytes(Registre state[4]);
     static void ShiftRows(Registre state[4]);
-    void MixColumns(Registre state[4]);
+    static void MixColumns(Registre state[4]);
 
+
+public:
+    AES(const vector<Registre> &key);
+    void chiffrement(Registre state[4]);
 };
 
 
