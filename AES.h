@@ -45,6 +45,8 @@ public:
     AES(const vector<Registre> &key);
     void chiffrement(Registre state[4]) const;
     void Dechiffrement(Registre state[4]) const;
+    vector<unsigned char> ChiffrementECB(const vector<unsigned char>& TextNonChiffremnt);
+    vector<unsigned char> DechiffrementECB(const vector<unsigned char>& TextChirrement);
 };
 
 

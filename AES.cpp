@@ -93,8 +93,8 @@ void AES::keyExpansion(const vector<Registre> &key) {
 
 void AES::SubWord(Registre& r) {
     for (int i = 0; i < 4; i++) {
-        unsigned char DeuxHexa = r.getByte(i);
-        unsigned char nouvelleByte = sbox[DeuxHexa];
+        uint DeuxHexa = r.getByte(i);
+        uint nouvelleByte = sbox[DeuxHexa];
         r.setByte(i, nouvelleByte);
     }
 }
@@ -102,8 +102,8 @@ void AES::SubWord(Registre& r) {
 
 void AES::InvSubWord(Registre &r) {
     for (int i = 0; i < 4; i++) {
-        unsigned char DeuxHexa = r.getByte(i);
-        unsigned char nouvelleByte = Invsbox[DeuxHexa];
+        uint DeuxHexa = r.getByte(i);
+        uint nouvelleByte = Invsbox[DeuxHexa];
         r.setByte(i, nouvelleByte);
     }
 }
@@ -242,12 +242,19 @@ void AES::InvSubBytes(Registre state[4]) {
 
 void AES::InvMixColumns(Registre state[4]) {
     for (int i = 0; i < 4; i++) {
-        //On peut penser que s = 1, XOR = +, xtime = fois 2
+        // 's' représente notre unité de base {01}
         Registre s = state[i];
-        Registre x2 = s.xtime();
-        Registre x4 = x2.xtime();
-        Registre x8 = x4.xtime();
 
+        // --- ÉTAPE 1 : Générer les puissances de 2 via xtime() ---
+        // Le XOR ne peut pas créer de nouvelles puissances (s XOR s = 0).
+        // On utilise xtime pour "sauter" aux paliers suivants : 2, 4, 8.
+        Registre x2 = s.xtime(); // On obtient {02}
+        Registre x4 = x2.xtime(); // On obtient {04} (2 * 2)
+        Registre x8 = x4.xtime(); // On obtient {08} (4 * 2)
+
+        // --- ÉTAPE 2 : Assembler les coefficients via XOR ---
+        // Une fois qu'on a les briques (8, 4, 2, 1), on peut composer
+        // n'importe quel coefficient intermédiaire par simple addition (XOR).
         Registre x9 = x8.XOR(s); // 8 + 1 = 9
         Registre xB = x8.XOR(x2).XOR(s); // 8 + 2 + 1 = 11 = B
         Registre xD = x8.XOR(x4).XOR(s); // 8 + 4 + 1 = 13 = D
@@ -258,4 +265,67 @@ void AES::InvMixColumns(Registre state[4]) {
         state[i].setByte(2, xD.getByte(0) ^ x9.getByte(1) ^ xE.getByte(2) ^ xB.getByte(3));
         state[i].setByte(3, xB.getByte(0) ^ xD.getByte(1) ^ x9.getByte(2) ^ xE.getByte(3));
     }
+}
+
+vector<unsigned char> AES::ChiffrementECB(const vector<unsigned char> &TextNonChiffremnt) {
+    vector<unsigned char> TextChiffrement;
+    // On divise le message en blocs de 128 bits (16 octets)
+    for (int i = 0; i < TextNonChiffremnt.size(); i+=16) {
+        // Initialisation de la matrice d'état (4 colonnes de 32 bits)
+        Registre state[4] = {Registre(32), Registre(32), Registre(32), Registre(32)};
+        //On remplace dabord colone 0 de tt ligne, ensuite colone 1 de tt ligne ...
+        for (int colone = 0;  colone< 4; colone++) {
+            for (int ligne = 0; ligne < 4; ligne++) {
+                //Index c'est parce que dans ordin n'a pas matrice
+                //Donc on a passer les colonnes qu'on a deja fait
+                uint index = i + (colone * 4) + ligne;
+                uint8_t byte;
+                if (index < TextNonChiffremnt.size()) {
+                    byte = TextNonChiffremnt[index];
+                } else {
+                    byte = 0;
+                }
+                state[colone].setByte(ligne, byte);
+            }
+        }
+        this->Cipher(state);
+        for (int colone = 0; colone < 4; colone++) {
+            for (int ligne = 0; ligne < 4; ligne++) {
+                TextChiffrement.push_back(state[colone].getByte(ligne));
+            }
+        }
+    }
+    return TextChiffrement;
+}
+
+
+vector<unsigned char> AES::DechiffrementECB(const vector<unsigned char> &TextChirrement) {
+    vector<unsigned char> TextDeChiffrement;
+    // On divise le message en blocs de 128 bits (16 octets)
+    for (int i = 0; i < TextChirrement.size(); i+=16) {
+        // Initialisation de la matrice d'état (4 colonnes de 32 bits)
+        Registre state[4] = {Registre(32), Registre(32), Registre(32), Registre(32)};
+        //On remplace dabord colone 0 de tt ligne, ensuite colone 1 de tt ligne ...
+        for (int colone = 0;  colone< 4; colone++) {
+            for (int ligne = 0; ligne < 4; ligne++) {
+                //Index c'est parce que dans ordin n'a pas matrice
+                //Donc on a passer les colonnes qu'on a deja fait
+                uint index = i + (colone * 4) + ligne;
+                uint8_t byte;
+                if (index < TextChirrement.size()) {
+                    byte = TextChirrement[index];
+                } else {
+                    byte = 0;
+                }
+                state[colone].setByte(ligne, byte);
+            }
+        }
+        this->InvCipher(state);
+        for (int colone = 0; colone < 4; colone++) {
+            for (int ligne = 0; ligne < 4; ligne++) {
+                TextDeChiffrement.push_back(state[colone].getByte(ligne));
+            }
+        }
+    }
+    return TextDeChiffrement;
 }

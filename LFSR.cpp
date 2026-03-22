@@ -62,7 +62,7 @@ const LFSR& LFSR::operator=(const LFSR& lfsr) {
 
 string LFSR::genererSequence(uint longueur) {
     ostringstream str;
-    for (uint i = 1; i <= longueur; i++) {
+    for (uint i = 1; i <=    longueur; i++) {
         uint valeur = getBitSortie();
         str << valeur;
         rotL();
