@@ -267,10 +267,15 @@ void AES::InvMixColumns(Registre state[4]) {
     }
 }
 
-vector<unsigned char> AES::ChiffrementECB(const vector<unsigned char> &TextNonChiffremnt) {
+vector<unsigned char> AES::ChiffrementECB(const vector<unsigned char> &TextNonChiffremnt) const {
+    vector<unsigned char> padded = TextNonChiffremnt;
+    uint8_t padLen = 16 - (padded.size() % 16);  // 1~16
+    for (int i = 0; i < padLen; i++) {
+        padded.push_back(padLen);
+    }
     vector<unsigned char> TextChiffrement;
     // On divise le message en blocs de 128 bits (16 octets)
-    for (int i = 0; i < TextNonChiffremnt.size(); i+=16) {
+    for (int i = 0; i < static_cast<int>(padded.size()); i+=16) {
         // Initialisation de la matrice d'état (4 colonnes de 32 bits)
         Registre state[4] = {Registre(32), Registre(32), Registre(32), Registre(32)};
         //On remplace dabord colone 0 de tt ligne, ensuite colone 1 de tt ligne ...
@@ -278,14 +283,7 @@ vector<unsigned char> AES::ChiffrementECB(const vector<unsigned char> &TextNonCh
             for (int ligne = 0; ligne < 4; ligne++) {
                 //Index c'est parce que dans ordin n'a pas matrice
                 //Donc on a passer les colonnes qu'on a deja fait
-                uint index = i + (colone * 4) + ligne;
-                uint8_t byte;
-                if (index < TextNonChiffremnt.size()) {
-                    byte = TextNonChiffremnt[index];
-                } else {
-                    byte = 0;
-                }
-                state[colone].setByte(ligne, byte);
+                state[colone].setByte(ligne, padded[i + colone * 4 + ligne]);
             }
         }
         this->Cipher(state);
@@ -299,7 +297,7 @@ vector<unsigned char> AES::ChiffrementECB(const vector<unsigned char> &TextNonCh
 }
 
 
-vector<unsigned char> AES::DechiffrementECB(const vector<unsigned char> &TextChirrement) {
+vector<unsigned char> AES::DechiffrementECB(const vector<unsigned char> &TextChirrement) const {
     vector<unsigned char> TextDeChiffrement;
     // On divise le message en blocs de 128 bits (16 octets)
     for (int i = 0; i < TextChirrement.size(); i+=16) {
@@ -310,14 +308,8 @@ vector<unsigned char> AES::DechiffrementECB(const vector<unsigned char> &TextChi
             for (int ligne = 0; ligne < 4; ligne++) {
                 //Index c'est parce que dans ordin n'a pas matrice
                 //Donc on a passer les colonnes qu'on a deja fait
-                uint index = i + (colone * 4) + ligne;
-                uint8_t byte;
-                if (index < TextChirrement.size()) {
-                    byte = TextChirrement[index];
-                } else {
-                    byte = 0;
-                }
-                state[colone].setByte(ligne, byte);
+                uint index = i + colone * 4 + ligne;
+                state[colone].setByte(ligne, TextChirrement[index]);
             }
         }
         this->InvCipher(state);
@@ -327,5 +319,127 @@ vector<unsigned char> AES::DechiffrementECB(const vector<unsigned char> &TextChi
             }
         }
     }
+    //Enlever padding
+    if (!TextDeChiffrement.empty()) {
+        uint8_t padLen = TextDeChiffrement.back();
+        if (padLen >= 1 && padLen <= 16) {
+            TextDeChiffrement.resize(TextDeChiffrement.size() - padLen);
+        }
+    }
     return TextDeChiffrement;
 }
+
+
+vector<unsigned char> AES::ChiffrementCBC_MAC(const vector<unsigned char> &TextNonChiffremnt) const{
+    vector<unsigned char> padded = TextNonChiffremnt;
+    uint8_t padLen = 16 - (padded.size() % 16);  // 1~16
+    for (int i = 0; i < padLen; i++) {
+        padded.push_back(padLen);
+    }
+    vector<unsigned char> IV(16, 0x00);
+    vector<unsigned char> TextChiffrement;
+
+    for (int i = 0; i < padded.size(); i += 16) {
+        // Étape 1 : XOR avec le bloc précédent (ou IV pour le premier bloc)
+        Registre state[4] = {Registre(32), Registre(32), Registre(32), Registre(32)};
+        for (int colone = 0; colone < 4; colone++) {
+            for (int ligne = 0; ligne < 4; ligne++) {
+                int idx = i + colone * 4 + ligne;
+                unsigned char b = padded[idx] ^ IV[colone * 4 + ligne];
+                state[colone].setByte(ligne, b);
+            }
+        }
+        // Étape 2 : Chiffrement AES
+        this->Cipher(state);
+
+        // Étape 3 : Sauvegarder ce bloc comme "prev" pour le prochain
+        TextChiffrement.clear();
+        IV.clear();
+        for (int colone = 0; colone < 4; colone++) {
+            for (int ligne = 0; ligne < 4; ligne++) {
+                unsigned char b = state[colone].getByte(ligne);
+                IV.push_back(b);
+                TextChiffrement.push_back(b);
+            }
+        }
+    }
+    // CBC-MAC = seulement le dernier bloc (le tag)
+    return TextChiffrement;
+}
+
+vector<unsigned char> AES::ChiffrementCBC(const vector<unsigned char> &TextNonChiffremnt) const {
+    vector<unsigned char> padded = TextNonChiffremnt;
+    uint8_t padLen = 16 - (padded.size() % 16);
+    for (int i = 0; i < padLen; i++) padded.push_back(padLen);
+
+    vector<unsigned char> IV(16, 0x00);
+    vector<unsigned char> TextChiffrement;  // ← 不清空，保留所有块
+
+    for (int i = 0; i < (int)padded.size(); i += 16) {
+        Registre state[4] = {Registre(32), Registre(32), Registre(32), Registre(32)};
+        for (int colone = 0; colone < 4; colone++) {
+            for (int ligne = 0; ligne < 4; ligne++) {
+                int idx = i + colone * 4 + ligne;
+                unsigned char b = padded[idx] ^ IV[colone * 4 + ligne];
+                state[colone].setByte(ligne, b);
+            }
+        }
+        this->Cipher(state);
+
+        IV.clear();
+        for (int colone = 0; colone < 4; colone++) {
+            for (int ligne = 0; ligne < 4; ligne++) {
+                unsigned char b = state[colone].getByte(ligne);
+                IV.push_back(b);
+                TextChiffrement.push_back(b);  // ← 每块都保留
+            }
+        }
+    }
+    return TextChiffrement;
+}
+
+vector<unsigned char> AES::DechiffrementCBC_MAC(const vector<unsigned char> &TextChirrement) const {
+    vector<unsigned char> IV(16, 0x00);
+    vector<unsigned char> TextDeChiffrement;
+
+    for (int i = 0; i < (int)TextChirrement.size(); i += 16) {
+        Registre state[4] = {Registre(32), Registre(32), Registre(32), Registre(32)};
+        for (int colone = 0; colone < 4; colone++) {
+            for (int ligne = 0; ligne < 4; ligne++) {
+                int idx = i + colone * 4 + ligne;
+                state[colone].setByte(ligne, TextChirrement[idx]);
+            }
+        }
+
+        this->InvCipher(state);
+
+        // Sauvegarder le bloc chiffré courant avant de l'écraser
+        vector<unsigned char> lastBlock(16);
+        for (int colone = 0; colone < 4; colone++) {
+            for (int ligne = 0; ligne < 4; ligne++) {
+                lastBlock[colone * 4 + ligne] = TextChirrement[i + colone * 4 + ligne];
+            }
+        }
+
+        // XOR avec IV (ou bloc précédent)
+        for (int colone = 0; colone < 4; colone++) {
+            for (int ligne = 0; ligne < 4; ligne++) {
+                unsigned char b = state[colone].getByte(ligne) ^ IV[colone * 4 + ligne];
+                TextDeChiffrement.push_back(b);
+            }
+        }
+
+        IV = lastBlock; // Le bloc chiffré courant devient IV pour le prochain
+    }
+
+    // Enlever le PKCS#7 padding
+    if (!TextDeChiffrement.empty()) {
+        uint8_t padLen = TextDeChiffrement.back();
+        if (padLen >= 1 && padLen <= 16) {
+            TextDeChiffrement.resize(TextDeChiffrement.size() - padLen);
+        }
+    }
+
+    return TextDeChiffrement;
+}
+

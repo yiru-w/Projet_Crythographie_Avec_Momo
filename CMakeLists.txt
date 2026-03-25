@@ -1,12 +1,12 @@
-cmake_minimum_required(VERSION 4.1)
-project(untitled)
+cmake_minimum_required(VERSION 3.10)
+project(Projet_Crythographie_Avec_Momo)
 
 set(CMAKE_CXX_STANDARD 20)
 
-add_executable(TP1-Crypthographie main.cpp
-        LFSR.cpp
-        LFSR.h
+add_executable(Projet_Crythographie_Avec_Momo main.cpp
         Registre.cpp
         Registre.h
         AES.cpp
-        AES.h)
+        AES.h
+)
+

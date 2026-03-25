@@ -5,7 +5,7 @@
 
 #include <iostream>
 #include <string>
-#include <bits/stdint-uintn.h>
+#include <cstdint>
 
 using namespace std;
 

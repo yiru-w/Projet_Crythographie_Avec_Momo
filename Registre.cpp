@@ -86,9 +86,9 @@ Registre Registre::xtime() const {
     Registre r(32);
     for (int i = 0; i < 4; i++) {
         unsigned char b = this->getByte(i);
-        if (this->get(i * 8) == 1) {
+        if (b & 0x80) {
             b = (b << 1) ^ 0x1b;
-        }else {
+        } else {
             b = b << 1;
         }
         r.setByte(i, b);
