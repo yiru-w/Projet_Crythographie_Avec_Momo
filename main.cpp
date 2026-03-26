@@ -101,6 +101,13 @@ int main(int argc, char* argv[]) {
                 resultData = aes.DechiffrementECB(inputData);
                 cout << "Dechiffrement ECB termine avec succes." << endl;
             }
+            else if (action == "-m") {
+                resultData = aes.ChiffrementECB_MAC(inputData);
+                cout << "ECB-MAC : ";
+                for (unsigned char b : resultData)
+                    cout << hex << setw(2) << setfill('0') << (int)b;
+                cout << dec << endl;
+            }
             else {
                 cerr << "Action non reconnue (-e ou -d)." << endl;
                 return 1;

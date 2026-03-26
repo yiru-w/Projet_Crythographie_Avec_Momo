@@ -47,6 +47,7 @@ public:
     void Dechiffrement(Registre state[4]) const;
     vector<unsigned char> ChiffrementECB(const vector<unsigned char>& TextNonChiffremnt) const;
     vector<unsigned char> DechiffrementECB(const vector<unsigned char>& TextChirrement) const;
+    vector<unsigned char> ChiffrementECB_MAC(const vector<unsigned char>& TextChirrement) const;
     vector<unsigned char> ChiffrementCBC(const vector<unsigned char> &TextNonChiffremnt) const;
     vector<unsigned char> ChiffrementCBC_MAC(const vector<unsigned char>& TextNonChiffremnt) const;
     vector<unsigned char> DechiffrementCBC_MAC(const vector<unsigned char>& TextChirrement) const;

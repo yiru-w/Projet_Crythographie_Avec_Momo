@@ -297,6 +297,43 @@ vector<unsigned char> AES::ChiffrementECB(const vector<unsigned char> &TextNonCh
 }
 
 
+vector<unsigned char> AES::ChiffrementECB_MAC(const vector<unsigned char> &TextNonChiffremnt) const {
+    vector<unsigned char> padded = TextNonChiffremnt;
+    uint8_t padLen = 16 - (padded.size() % 16);
+    for (int i = 0; i < padLen; i++) padded.push_back(padLen);
+
+    // Vecteur précédent (IV = 0x00...00 pour CBC-MAC)
+    vector<unsigned char> prev(16, 0x00);
+
+    vector<unsigned char> TextChiffrement;
+
+    for (int i = 0; i < static_cast<int>(padded.size()); i += 16) {
+        Registre state[4] = {Registre(32), Registre(32), Registre(32), Registre(32)};
+
+        for (int colone = 0; colone < 4; colone++) {
+            for (int ligne = 0; ligne < 4; ligne++) {
+                int idx = i + colone * 4 + ligne;
+                // XOR avec le bloc précédent avant chiffrement ← c'est ça le CBC
+                state[colone].setByte(ligne, padded[idx] ^ prev[colone * 4 + ligne]);
+            }
+        }
+
+        this->Cipher(state);
+
+        // Mettre à jour prev + collecter la sortie
+        for (int colone = 0; colone < 4; colone++) {
+            for (int ligne = 0; ligne < 4; ligne++) {
+                uint8_t b = state[colone].getByte(ligne);
+                prev[colone * 4 + ligne] = b;
+                TextChiffrement.push_back(b);
+            }
+        }
+    }
+
+    // Le MAC = dernier bloc seulement
+    return vector<unsigned char>(TextChiffrement.end() - 16, TextChiffrement.end());
+}
+
 vector<unsigned char> AES::DechiffrementECB(const vector<unsigned char> &TextChirrement) const {
     vector<unsigned char> TextDeChiffrement;
     // On divise le message en blocs de 128 bits (16 octets)
